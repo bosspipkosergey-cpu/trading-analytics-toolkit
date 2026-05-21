@@ -1,42 +1,46 @@
 """
-TradeManager: Intelligent position management (Break-Even & Trailing Stop).
-Designed to be broker-agnostic.
+TradeManager: Professional module for Trailing Stop & Break-Even logic.
 """
 
 class TradeManager:
-    def __init__(self, fallback_sl: float, max_losses: int = 3):
+    def __init__(self, fallback_sl: float):
         self.fallback_sl = fallback_sl
-        self.max_losses = max_losses
-        self.consecutive_losses = 0
 
-    def calculate_stop_adjustment(self, 
-                                  current_price: float, 
-                                  entry_price: float, 
-                                  curr_sl: float, 
-                                  direction: str, 
-                                  atr: float,
-                                  be_trigger: float,
-                                  trail_start: float,
-                                  trail_step: float) -> float:
+    def calculate_initial_stop(self, price: float, direction: str, atr: float) -> float:
+        """Рассчитывает первичный уровень стоп-лосса."""
+        dist = max(atr * 1.5, self.fallback_sl)
+        return price - dist if direction == "BUY" else price + dist
+
+    def get_new_stop_level(self, 
+                           current_price: float, 
+                           entry_price: float, 
+                           current_sl: float, 
+                           direction: str, 
+                           atr: float) -> float:
         """
-        Возвращает новый уровень Stop Loss или None, если изменения не нужны.
+        Основной метод логики: 
+        Возвращает обновленный уровень стоп-лосса или None, если двигать не нужно.
         """
         profit = (current_price - entry_price) if direction == 'BUY' else (entry_price - current_price)
-        be_offset = max(atr * 0.1, self.fallback_sl * 0.1)
         
-        # 1. Logic for Break-Even
-        is_be_set = (direction == 'BUY' and curr_sl >= entry_price + be_offset * 0.9) or \
-                    (direction == 'SELL' and curr_sl <= entry_price - be_offset * 0.9)
+        # Параметры (можно вынести в конфиг)
+        be_trigger = max(atr * 1.5, self.fallback_sl * 0.8)
+        trail_start = max(atr * 1.2, self.fallback_sl * 1.0)
+        trail_step = max(atr * 0.4, self.fallback_sl * 0.3)
+        
+        # 1. Логика безубытка (Break-Even)
+        if profit >= be_trigger:
+            # Устанавливаем стоп в безубыток + небольшой отступ
+            be_level = entry_price + (atr * 0.1) if direction == 'BUY' else entry_price - (atr * 0.1)
+            # Возвращаем, если текущий стоп еще не там
+            if (direction == 'BUY' and current_sl < be_level) or (direction == 'SELL' and current_sl > be_level):
+                return be_level
 
-        if profit >= be_trigger and not is_be_set:
-            return entry_price + be_offset if direction == 'BUY' else entry_price - be_offset
-
-        # 2. Logic for Trailing Stop
+        # 2. Логика трейлинга (Trailing Stop)
         if profit >= trail_start:
-            safe_step = max(trail_step, self.fallback_sl * 0.5)
-            target = current_price - safe_step if direction == 'BUY' else current_price + safe_step
-            
-            if (direction == 'BUY' and target > curr_sl) or (direction == 'SELL' and target < curr_sl):
+            target = current_price - trail_step if direction == 'BUY' else current_price + trail_step
+            # Двигаем стоп только в сторону прибыли
+            if (direction == 'BUY' and target > current_sl) or (direction == 'SELL' and target < current_sl):
                 return target
 
-        return None # No change
+        return current_sl # Стоп остается без изменений
