@@ -27,3 +27,22 @@ new_stop = manager.get_new_stop_level(
     direction="BUY", 
     atr=1.5
 )
+# Trade Management Module 🛡️
+
+A professional, broker-agnostic Python module for intelligent position management.
+
+## Why use this?
+Manual trade management is prone to emotional errors. This module automates the two most critical aspects of risk management:
+1. **Break-Even (BE):** Secure your capital once the trade reaches a profitable threshold.
+2. **Trailing Stop:** Automatically lock in profits as the market moves in your favor.
+
+## Key Features
+* **Broker-Agnostic:** Does not rely on any specific API. Use it with any broker.
+* **ATR-Based Logic:** Dynamically adjusts to market volatility using ATR, rather than static ticks.
+* **Easy Integration:** A simple `calculate_stop_adjustment` method that integrates into any bot loop in minutes.
+
+## How to run the demo
+1. Ensure you have the `trade_manager.py` file in the same folder.
+2. Run the demo script:
+   ```bash
+   python demo.py
